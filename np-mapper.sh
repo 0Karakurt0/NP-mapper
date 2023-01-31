@@ -30,19 +30,35 @@ for arg in $@;do
             shift 2
             ;;
 esac
-game_number=0000000000000000
-code=FFFFFF
 unit=100 # > 80
 r_star=$(bc <<< "sqrt($unit)-6")
 r_main=$(( $r_star*2 ))
 
+
+if [ -r $dump_file ]; then
+    echo "Working with dump $dump_file";
+else
+    if [ $dump_file ]; then
+        read answer -p "Dump file could not be read. Download new one? (y/N) "
+        case $answer in
+            y|Y|yes) ;;
+            *) exit 1 ;;
+        esac
+    fi
+    dump_file=output.json
+
+    [ -z $game_number ] && \
+        echo "Game number is not set"; exit 1
+    [ -z $code ] && \
+        echo "API key is not set"    ; exit 1
 
 curl https://np.ironhelmet.com/api  \
     -X POST                         \
     -d game_number=$game_number     \
     -d code=$code                   \
     -d api_version=0.1              \
-    > dump.json || exit 1
+     > $dump_file || exit 1
+fi
 
 echo  "What teams there are?"
 read -a teams
@@ -55,14 +71,14 @@ for team in ${teams[@]}; do
     done
 done
 
-cords=$(jq -r '.scanning_data.stars|.[]|.x' dump.json | sort -h)
+cords=$(jq -r '.scanning_data.stars|.[]|.x' $dump_file | sort -h)
 stars_total=$( wc -l <<< $cords)
 min_cord=$(head -n 1 <<< $cords)
 max_cord=$(tail -n 1 <<< $cords)
 units_x=$( bc <<< "($min_cord*-1+$max_cord+2.5)/1" )
 home_x=$(  bc <<< "$units_x - $max_cord -2" )
 
-cords=$(jq -r '.scanning_data.stars|.[]|.y' dump.json | sort -h)
+cords=$(jq -r '.scanning_data.stars|.[]|.y' $dump_file | sort -h)
 min_cord=$(head -n 1 <<< $cords)
 max_cord=$(tail -n 1 <<< $cords)
 units_y=$( bc <<< "($min_cord*-1+$max_cord+2.5)/1" )
@@ -109,6 +125,7 @@ while read x y player; do
         esac
         color=$( bc <<< "$player-(8*($player/8))" )
         #echo "Color:$color"
+
         case $color in
             0) render_blue="${render_blue} $geometry";;
             1) render_sky="${render_sky} $geometry";;
@@ -129,9 +146,9 @@ while read x y player; do
     #echo -e "\rStar:${x}x${y} | Shape:$shape | Color:$color | Team:$team"
 done < <(
     jq -r ' .scanning_data.stars|
-        .[]                     |
+            .[]                 |
         "\(.x) \(.y) \(.puid)"'\
-        dump.json;
+        $dump_file;
         )
 echo
 
