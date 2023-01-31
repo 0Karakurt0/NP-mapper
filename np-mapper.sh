@@ -29,7 +29,8 @@ for arg in $@;do
             code="$2"
             shift 2
             ;;
-esac
+    esac
+done
 unit=100 # > 80
 r_star=$(bc <<< "sqrt($unit)-6")
 r_main=$(( $r_star*2 ))
@@ -48,9 +49,9 @@ else
     dump_file=output.json
 
     [ -z $game_number ] && \
-        echo "Game number is not set"; exit 1
+        {echo "Game number is not set"; exit 1}
     [ -z $code ] && \
-        echo "API key is not set"    ; exit 1
+        {echo "API key is not set"    ; exit 1}
 
 curl https://np.ironhelmet.com/api  \
     -X POST                         \
@@ -60,17 +61,24 @@ curl https://np.ironhelmet.com/api  \
      > $dump_file || exit 1
 fi
 
+if [ -z $teams ]; then
+    echo  "What teams there are?"
+    read -a teams
 
-echo  "What teams there are?"
-read -a teams
+    [ $config ] && echo "teams=($teams)" > $config_file
 
-for team in ${teams[@]}; do
-    echo  "Who belongs to team $team?"
-    read -a players_entered
-    for player in ${players_entered[@]}; do
-        players["$player"]="$team"
+    [ $config ] && echo "players=(" > $config_file
+    for team in ${teams[@]}; do
+        echo  "Who belongs to team $team?"
+        read -a players_entered
+        for player in ${players_entered[@]}; do
+            players["$player"]="$team"
+            [ $config ] && echo "["$player"]="$team" " > $config_file
+        done
     done
-done
+    [ $config ] && echo ")" > $config_file
+
+fi
 
 cords=$(jq -r '.scanning_data.stars|.[]|.x' $dump_file | sort -h)
 stars_total=$( wc -l <<< $cords)
@@ -144,7 +152,7 @@ while read x y player; do
     fi
     #break
     stars_done=$(( stars_done + 1 ))
-    #echo -e "\rStar:${x}x${y} | Shape:$shape | Color:$color | Team:$team"
+    [ $log ] && echo -e "\rStar:${x}x${y} | Shape:$shape | Color:$color | Team:$team"
 done < <(
     jq -r ' .scanning_data.stars|
             .[]                 |
