@@ -60,6 +60,7 @@ curl https://np.ironhelmet.com/api  \
      > $dump_file || exit 1
 fi
 
+
 echo  "What teams there are?"
 read -a teams
 
@@ -153,7 +154,7 @@ done < <(
 echo
 
 echo "Generating map..."
-magick -size $(( $unit * $units_x))x$(( $unit*$units_y ))              \
+magick -size $(($unit*$units_x))x$(($unit*$units_y))\
     xc:black                                    \
     -fill   none                                \
     -strokewidth 2                              \
@@ -166,7 +167,7 @@ magick -size $(( $unit * $units_x))x$(( $unit*$units_y ))              \
     -stroke "#C11A00" -draw "$render_red"       \
     -stroke "#C12EBF" -draw "$render_pink"      \
     -stroke "#6127C4" -draw "$render_violet"    \
-    output.png
+    ${output_file:-output.json}
 
 exit #This does not work anyway
 for team in ${teams[@]}; do
