@@ -1,4 +1,35 @@
 #! /bin/bash
+
+for arg in $@;do
+    case $arg in
+        -c|--config)
+            source "$2"
+            shift 2
+            ;;
+        -f|--file)
+            dump_file="$2"
+            shift 2
+            ;;
+        -h|--help)
+            exit
+            ;;
+        -o|--output)
+            output_file="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            log=true
+            shift
+            ;;
+        -g|--game)
+            game_number="$2"
+            shift 2
+            ;;
+        -k|--key)
+            code="$2"
+            shift 2
+            ;;
+esac
 game_number=0000000000000000
 code=FFFFFF
 unit=100 # > 80
