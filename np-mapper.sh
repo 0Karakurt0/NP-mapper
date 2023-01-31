@@ -3,6 +3,7 @@
 for arg in $@;do
     case $arg in
         -c|--config)
+            config_file="$2"
             source "$2"
             config=true
             shift 2
@@ -62,22 +63,27 @@ curl https://np.ironhelmet.com/api  \
      > $dump_file || exit 1
 fi
 
+if [ -z $(cat "$config_file") ]; then
+    echo "game_number=$game_number" >> "$config_file"
+    echo "code=$code"  >> "$config_file"
+fi
+
 if [ -z $teams ]; then
     echo  "What teams there are?"
     read -a teams
 
-    [ $config ] && echo "teams=($teams)" >> $config_file
+    [ $config ] && echo "teams=(${teams[@]})" >> "$config_file"
 
-    [ $config ] && echo "players=(" >> $config_file
+    [ $config ] && echo "players=(" >> "$config_file"
     for team in ${teams[@]}; do
         echo  "Who belongs to team $team?"
         read -a players_entered
         for player in ${players_entered[@]}; do
             players["$player"]="$team"
-            [ $config ] && echo "["$player"]="$team" " >> $config_file
+            [ $config ] && echo "[$player]=\"$team\" " >> "$config_file"
         done
     done
-    [ $config ] && echo ")" >> $config_file
+    [ $config ] && echo ")" >> "$config_file"
 
 fi
 
