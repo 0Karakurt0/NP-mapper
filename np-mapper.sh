@@ -4,7 +4,6 @@ for arg in $@;do
     case $arg in
         -c|--config)
             config_file="$2"
-            source "$2"
             config=true
             shift 2
             ;;
@@ -37,6 +36,7 @@ unit=100 # > 80
 r_star=$(bc <<< "sqrt($unit)-6")
 r_main=$(( $r_star*2 ))
 
+source "$config_file" && echo "Sourced config"
 
 if [ -r $dump_file ]; then
     echo "Working with dump $dump_file";
@@ -63,7 +63,7 @@ curl https://np.ironhelmet.com/api  \
      > $dump_file || exit 1
 fi
 
-if [ -z $(cat "$config_file") ]; then
+if [ -z "$(cat "$config_file")" ]; then
     echo "game_number=$game_number" >> "$config_file"
     echo "code=$code"  >> "$config_file"
 fi
