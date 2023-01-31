@@ -4,6 +4,7 @@ for arg in $@;do
     case $arg in
         -c|--config)
             source "$2"
+            config=true
             shift 2
             ;;
         -f|--file)
@@ -65,18 +66,18 @@ if [ -z $teams ]; then
     echo  "What teams there are?"
     read -a teams
 
-    [ $config ] && echo "teams=($teams)" > $config_file
+    [ $config ] && echo "teams=($teams)" >> $config_file
 
-    [ $config ] && echo "players=(" > $config_file
+    [ $config ] && echo "players=(" >> $config_file
     for team in ${teams[@]}; do
         echo  "Who belongs to team $team?"
         read -a players_entered
         for player in ${players_entered[@]}; do
             players["$player"]="$team"
-            [ $config ] && echo "["$player"]="$team" " > $config_file
+            [ $config ] && echo "["$player"]="$team" " >> $config_file
         done
     done
-    [ $config ] && echo ")" > $config_file
+    [ $config ] && echo ")" >> $config_file
 
 fi
 
