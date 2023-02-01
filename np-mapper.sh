@@ -38,7 +38,7 @@ r_main=$(( $r_star*2 ))
 
 source "$config_file" && echo "Sourced config"
 
-if [ -r $dump_file ]; then
+if [ -e "$dump_file" ]; then
     echo "Working with dump $dump_file";
 else
     if [ $dump_file ]; then
@@ -48,12 +48,12 @@ else
             *) exit 1 ;;
         esac
     fi
-    dump_file=output.json
+    dump_file="dump$(date +%d.%m.%y).json"
 
-    [ -z $game_number ] && \
-        {echo "Game number is not set"; exit 1}
-    [ -z $code ] && \
-        {echo "API key is not set"    ; exit 1}
+    [ -z "$game_number" ] && \
+        { echo "Game number is not set"; exit 1; }
+    [ -z "$code" ] && \
+        { echo "API key is not set"    ; exit 1; }
 
 curl https://np.ironhelmet.com/api  \
     -X POST                         \
@@ -182,7 +182,7 @@ magick -size $(($unit*$units_x))x$(($unit*$units_y))\
     -stroke "#C11A00" -draw "$render_red"       \
     -stroke "#C12EBF" -draw "$render_pink"      \
     -stroke "#6127C4" -draw "$render_violet"    \
-    ${output_file:-output.json}
+    ${output_file:-output.png}
 
 exit #This does not work anyway
 for team in ${teams[@]}; do
