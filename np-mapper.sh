@@ -72,9 +72,14 @@ if [ -z $teams ]; then
     echo  "What teams there are?"
     read -a teams
 
-    [ $config ] && echo "teams=(${teams[@]})" >> "$config_file"
+    echo  "What colors they use?"
+    read -a teams_colors
 
-    [ $config ] && echo "players=(" >> "$config_file"
+    if [ $config ]; then
+        echo "teams=(${teams[@]})" >> "$config_file"
+        echo "teams_colors=(${teams_colors[@]})" >> "$config_file"
+        echo "players=(" >> "$config_file"
+    fi
     for team in ${teams[@]}; do
         echo  "Who belongs to team $team?"
         read -a players_entered
