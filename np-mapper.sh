@@ -168,7 +168,7 @@ done < <(
         )
 echo
 
-echo "Generating map..."
+echo -n "Generating map..."
 magick -size $(($unit*$units_x))x$(($unit*$units_y))\
     xc:black                                    \
     -fill   none                                \
@@ -182,21 +182,29 @@ magick -size $(($unit*$units_x))x$(($unit*$units_y))\
     -stroke "#C11A00" -draw "$render_red"       \
     -stroke "#C12EBF" -draw "$render_pink"      \
     -stroke "#6127C4" -draw "$render_violet"    \
-    ${output_file:-output.png}
+    ${output_file:-output.png} && \
+    echo "Done"
 
-exit #This does not work anyway
-for team in ${teams[@]}; do
-    echo "Compiling team $team..."
-    stars=( ${team_stars[$team]} )
-    for star in ${stars[@]}; do
-        x=$(cut -f 1 -d x <<< $star)
-        y=$(cut -f 2 -d x <<< $star)
-        echo "$x | $y"
-        magick output.png              \
-              -draw pixel           \
-              -fx "Xi=i-$x; Yj=j-$y; 1.2*(0.5-hypot(Xi,Yj)/70.0)+0.5" \
-        output.png
-        echo --
+exit
+for x_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * $units_x )) ); do
+    for y_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * $units_y )) ); do
+
+        for team in ${teams[@]}; do
+            point_value[$team]=0
+            stars=( ${team_stars[$team]} )
+            for star in ${stars[@]}; do
+                x=$(cut -f 1 -d x <<< $star)
+                y=$(cut -f 2 -d x <<< $star)
+                echo "scale=3
+                ${point_value[$team]} + 1/(($x_sqw-$x)^2 + ($y_sqw-$y)^2)"
+                echo -n "$x | $y | $team | "
+                point_value[$team]=$( bc <<< \
+                "scale=4
+                ${point_value[$team]} + 1/sqrt(($x_sqw-$x)^2 + ($y_sqw-$y)^2)"
+                )
+                echo "$point_value"
+            done
+            echo --
+        done
     done
-
 done
