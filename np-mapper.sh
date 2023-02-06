@@ -48,7 +48,7 @@ else
             *) exit 1 ;;
         esac
     fi
-    dump_file="dump$(date +%d.%m.%y).json"
+    dump_file="dump-$(date +%d.%m.%y-%h).json"
 
     [ -z "$game_number" ] && \
         { echo "Game number is not set"; exit 1; }
@@ -108,15 +108,19 @@ echo "Grid:${units_x}x${units_y}"
 echo "Estimated home: ${home_x}x${home_y}"
 
 while read x y player; do
-    echo -en "\rProgress:$stars_done/$stars_total"
-    x=$( bc <<< "(( $x + $home_x ) * $unit + $unit.5)/1" )
-    y=$( bc <<< "(( $y + $home_y ) * $unit + $unit.5)/1" )
-    #echo -ne "\rStar:${x}x${y}|"
+    echo -en "\rSorting stars:$stars_done/$stars_total"
+    source <(
+        bc <<< "
+        x=(( $x + $home_x ) * $unit + $unit.5)/1
+        y=(( $y + $home_y ) * $unit + $unit.5)/1
+        s=$player/8
+        print \"x=\",x,\"\n\"
+        print \"y=\",y,\"\n\"
+        print \"shape=\",s,\"\n\"
+        ")
     r=$r_star
     render_white="${render_white} circle $x,$y $(($x+$r)),$y"
     if [ ! $player = -1 ]; then
-        shape=$( bc <<< "$player/8" )
-        #echo -n "Shape:$shape|"
         r=$r_main
         case $shape in
             #Circle
@@ -144,8 +148,8 @@ while read x y player; do
             7) geometry="roundRectangle %[fx:$x-$r*0.5],%[fx:$y-$r] %[fx:$x+$r*0.5],%[fx:$y+$r] $r,%[fx:3*$r/7]"
                 ;;
         esac
+
         color=$( bc <<< "$player-(8*($player/8))" )
-        #echo "Color:$color"
 
         case $color in
             0) render_blue="${render_blue} $geometry";;
@@ -158,11 +162,10 @@ while read x y player; do
             7) render_violet="${render_violet} $geometry";;
         esac
 
-    team=${players["$player"]}
-    team_stars["$team"]="${team_stars["$team"]} ${x}x${y}"
+        team=${players["$player"]}
+        team_stars["$team"]="${team_stars["$team"]} ${x}x${y}"
 
     fi
-    #break
     stars_done=$(( stars_done + 1 ))
     [ $log ] && echo -e "\rStar:${x}x${y} | Shape:$shape | Color:$color | Team:$team"
 done < <(
@@ -173,43 +176,51 @@ done < <(
         )
 echo
 
-echo -n "Generating map..."
+echo -n "Drawing map..."
 magick -size $(($unit*$units_x))x$(($unit*$units_y))\
-    xc:black                                    \
-    -fill   none                                \
-    -strokewidth 2                              \
-    -stroke "#4B403E" -draw "$render_white"     \
-    -stroke "#0433FB" -draw "$render_blue"      \
-    -stroke "#009DDC" -draw "$render_sky"       \
-    -stroke "#35B303" -draw "$render_green"     \
-    -stroke "#FBBB0F" -draw "$render_yellow"    \
-    -stroke "#E16200" -draw "$render_orange"    \
-    -stroke "#C11A00" -draw "$render_red"       \
-    -stroke "#C12EBF" -draw "$render_pink"      \
-    -stroke "#6127C4" -draw "$render_violet"    \
-    ${output_file:-output.png} && \
+    xc:black                                        \
+    -fill   none                                    \
+    -strokewidth 2                                  \
+    -stroke "#4B403E" -draw "$render_white"         \
+    -stroke "#0433FB" -draw "$render_blue"          \
+    -stroke "#009DDC" -draw "$render_sky"           \
+    -stroke "#35B303" -draw "$render_green"         \
+    -stroke "#FBBB0F" -draw "$render_yellow"        \
+    -stroke "#E16200" -draw "$render_orange"        \
+    -stroke "#C11A00" -draw "$render_red"           \
+    -stroke "#C12EBF" -draw "$render_pink"          \
+    -stroke "#6127C4" -draw "$render_violet"        \
+    ${output_file:-output.png} &&                   \
     echo "Done"
 
-exit
-for x_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * $units_x )) ); do
-    for y_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * $units_y )) ); do
+
+total=$( bc <<< "(($unit * ($unit_x - 2))/($unit/2)) * (($unit * ($unit_y - 2))/($unit/2)) * $stars_total * ${#teams}" )
+for x_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * ( $units_x -1 ) )) ); do
+    for y_sqw in $( seq $unit $(( $unit / 2 )) $(( $unit * ( $units_y -1) )) ); do
+        don=$(( $don + 1 ))
 
         for team in ${teams[@]}; do
+            echo -en "\rCalculating areas:$don/$total Team=$team"
             point_value[$team]=0
-            stars=( ${team_stars[$team]} )
+            stars=${team_stars[$team]}
             for star in ${stars[@]}; do
                 x=$(cut -f 1 -d x <<< $star)
                 y=$(cut -f 2 -d x <<< $star)
-                echo "scale=3
-                ${point_value[$team]} + 1/(($x_sqw-$x)^2 + ($y_sqw-$y)^2)"
-                echo -n "$x | $y | $team | "
                 point_value[$team]=$( bc <<< \
                 "scale=4
                 ${point_value[$team]} + 1/sqrt(($x_sqw-$x)^2 + ($y_sqw-$y)^2)"
                 )
-                echo "$point_value"
             done
-            echo --
         done
+        higest=$(printf '%s\n' "${point_value[@]}" | sort -n | tail -n 1)
+        claim=$( echo ${point_value[@]/$higest//} | cut -d/ -f1 | wc -w )
+
+        magick "${output_file:-output.png}"     \
+            -stroke "${teams_color[$claim]}"    \
+            -fill   "${teams_color[$claim]}"    \
+            -draw "rectangle $(($x_sqw -3)),$(($y_sqw -3)) $(($x_sqw +3)),$(($y_sqw +3))" \
+            ${output_file:-output.png} &&       \
+            echo -e "\r${x_sqw}x${y_sqw} - ${teams[$claim]}"
+
     done
 done
